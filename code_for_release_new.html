@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>씬 사운드트랙 — 장면에 어울리는 곡 찾기</title>
+<style>
+  :root{
+    --ink:#ffffff;
+    --ink-soft:#eaeaea;
+    --paper:#4b93ad;
+    --paper-raised:#f7f6d6;
+    --line:#4b93ad;
+    --accent:#3ba7c9;
+    --accent-soft:#e3f4fa;
+    --accent-deep:#6eacc3;
+    --leaf:#6fb26a;
+    --leaf-soft:#e6f5e2;
+    --leaf-deep:#2f6b30;
+    --serif:'Iowan Old Style','Palatino Linotype','Noto Serif KR',serif;
+    --sans:'Pretendard','Apple SD Gothic Neo',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.6;
+  }
+  .wrap{
+    max-width:760px;
+    margin:0 auto;
+    padding:64px 24px 120px;
+  }
+  .eyebrow{
+    font-size:13px;
+    letter-spacing:0.12em;
+    color:var(--accent-deep);
+    text-transform:uppercase;
+    margin-bottom:14px;
+    font-weight:600;
+  }
+  h1{
+    font-family:var(--serif);
+    font-weight:400;
+    font-size:38px;
+    line-height:1.25;
+    margin:0 0 16px;
+    letter-spacing:-0.01em;
+  }
+  .lede{
+    font-size:16px;
+    color:var(--ink-soft);
+    max-width:52ch;
+    margin:0 0 48px;
+  }
+  .panel{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:28px;
+    margin-bottom:28px;
+  }
+  label{
+    display:block;
+    font-size:13px;
+    font-weight:600;
+    color:#4b93ad;
+    margin-bottom:10px;
+  }
+  textarea{
+    width:100%;
+    min-height:140px;
+    resize:vertical;
+    font-family:var(--sans);
+    font-size:15px;
+    line-height:1.65;
+    color:#ffffff;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:16px;
+  }
+  textarea::placeholder{
+  color:#e8f4f8;
+  }
+  textarea:focus{
+    outline:none;
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px var(--accent-soft);
+  }
+  .row-bottom{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-top:16px;
+    gap:16px;
+  }
+  .hint{
+    font-size:13px;
+    color:#4b93ad;
+  }
+  button.submit{
+    appearance:none;
+    border:none;
+    background:var(--accent-deep);
+    color:#fff;
+    font-family:var(--sans);
+    font-weight:600;
+    font-size:14px;
+    padding:12px 22px;
+    border-radius:9px;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:background 0.15s ease;
+  }
+  button.submit:hover{background:#306375}
+  button.submit:disabled{background:#c9c6bc;cursor:not-allowed;}
+
+  .error-box{
+    display:none;
+    font-size:13px;
+    color:#9a3b2f;
+    background:#fbeae6;
+    border:1px solid #eec6bd;
+    padding:10px 14px;
+    border-radius:8px;
+    margin-top:14px;
+  }
+
+.status{
+  display:none;
+  flex-direction:column;
+  gap:10px;
+  ...나머지 기존 속성 그대로...
+}
+.status-top{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.spinner{
+  ...기존 그대로...
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.progress-pct{
+  margin-left:auto;
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+}
+.progress-track{
+  width:100%;
+  height:6px;
+  border-radius:4px;
+  background:var(--line);
+  overflow:hidden;
+}
+.progress-fill{
+  height:100%;
+  width:0%;
+  border-radius:4px;
+  background:#f7f6d6;
+  transition:width 0.3s ease;
+}
+  #results{display:none;}
+
+  .section-label{
+    font-size:13px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--accent-deep);
+    font-weight:600;
+    margin:40px 0 16px;
+  }
+
+  .normalized{
+    font-family:var(--serif);
+    font-style:italic;
+    font-size:17px;
+    color:var(--ink-soft);
+    border-left:2px solid var(--line);
+    padding-left:18px;
+    margin:0 0 8px;
+  }
+
+  .track{
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:20px 22px;
+    margin-bottom:14px;
+    background:var(--paper-raised);
+  }
+  .track.primary{
+    border-color:var(--accent);
+    background:var(--accent-soft);
+  }
+  .track-top{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .track-title{
+    font-family:var(--serif);
+    font-size:19px;
+    color: #4b93ad;
+  }
+  .track-artist{
+    color:#4b93ad;
+    font-size:14px;
+  }
+  .track-score{
+    font-size:12px;
+    color:#4b93ad;
+    white-space:nowrap;
+  }
+  .track-reason{
+    margin-top:10px;
+    font-size:14px;
+    color:var(--ink-soft);
+    line-height:1.6;
+  }
+
+  .toggle-row{
+    margin:32px 0 8px;
+  }
+  button.toggle{
+    appearance:none;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:13px;
+    font-weight:600;
+    padding:9px 16px;
+    border-radius:20px;
+    cursor:pointer;
+  }
+  button.toggle:hover{border-color:var(--accent);}
+  button.toggle .chev{
+    display:inline-block;
+    margin-left:6px;
+    transition:transform 0.15s ease;
+  }
+  button.toggle[aria-expanded="true"] .chev{transform:rotate(180deg);}
+
+  #nearby{display:none;margin-top:16px;}
+  .nearby-track{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .nearby-track:last-child{border-bottom:none;}
+  .nearby-title{font-size:14px;}
+  .nearby-artist{color:var(--ink-soft);font-size:13px;}
+  .nearby-topic{
+    font-size:12px;
+    color:var(--leaf-deep);
+    background:var(--leaf-soft);
+    padding:4px 10px;
+    border-radius:20px;
+    white-space:nowrap;
+    height:fit-content;
+  }
+
+  footer{
+    margin-top:56px;
+    font-size:12px;
+    color:var(--ink-soft);
+  }
+
+  @media (max-width:520px){
+    .wrap{padding:36px 16px 80px;}
+    .eyebrow{font-size:12px;}
+    h1{font-size:26px;}
+    .lede{font-size:14px;margin-bottom:32px;}
+    .panel{padding:18px;border-radius:12px;}
+    textarea{font-size:16px;min-height:120px;padding:14px;}
+    .row-bottom{flex-direction:column;align-items:stretch;gap:12px;}
+    .hint{order:2;text-align:center;}
+    button.submit{width:100%;padding:14px 22px;font-size:15px;}
+    .section-label{margin:32px 0 12px;font-size:12px;}
+    .normalized{font-size:15px;padding-left:14px;}
+    .track{padding:16px;}
+    .track-top{flex-wrap:wrap;gap:6px 12px;}
+    .track-title{font-size:17px;}
+    .track-score{font-size:11px;}
+    .track-reason{font-size:13px;}
+    button.toggle{width:100%;padding:12px 16px;}
+    .nearby-track{flex-wrap:wrap;gap:6px 10px;}
+    .nearby-topic{white-space:normal;}
+    footer{font-size:11px;margin-top:40px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Scene → soundtrack</div>
+  <h1>어울리는 가사의 노래를 찾아보아요</h1>
+  <p class="lede">
+    캐릭터의 서사나 특정 장면을 적어주세요. 69만 곡 중에서 입력하신 서사와 가장 가까운 코사인 유사도를 가진 곡들을 알려드립니다.
+  </p>
+
+  <div class="panel">
+    <label for="scene-input">장면 또는 캐릭터 서사</label>
+    <textarea id="scene-input" placeholder="예: 오랜 세월 자신을 억눌러온 곳에서 마침내 벗어났지만, 자유로워진 순간에도 온전히 기뻐하지 못하는 인물의 이야기…"></textarea>
+    <div class="row-bottom">
+      <span class="hint">한국어로 적어도 괜찮아요.</span>
+      <button class="submit" id="submit-btn" type="button">곡 찾기</button>
+    </div>
+    <div class="error-box" id="error-box"></div>
+  </div>
+
+<div class="status" id="status">
+  <div class="status-top">
+    <div class="spinner"></div>
+    <span>장면을 읽고 어울리는 곡을 고르는 중…</span>
+    <span class="progress-pct" id="progress-pct">0%</span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+</div>
+
+  <div id="results">
+
+    <div class="section-label">가장 가까운 세 곡</div>
+    <div id="top3"></div>
+
+    <div class="toggle-row">
+      <button class="toggle" id="toggle-nearby" type="button" aria-expanded="false">
+        다른 결의 곡도 보기<span class="chev">⌄</span>
+      </button>
+    </div>
+    <div id="nearby"></div>
+  </div>
+
+  <footer>같은 장면도 매번 조금씩 다르게 읽힐 수 있어요. 문장을 바꿔 다시 시도해보세요.</footer>
+
+</div>
+
+<script>
+  const API_URL = "https://hsoz60sa5nya82-8003.proxy.runpod.net/recommend";
+
+  const input = document.getElementById('scene-input');
+  const submitBtn = document.getElementById('submit-btn');
+  const errorBox = document.getElementById('error-box');
+  const status = document.getElementById('status');
+  const results = document.getElementById('results');
+  const top3El = document.getElementById('top3');
+  const nearbyEl = document.getElementById('nearby');
+  const toggleBtn = document.getElementById('toggle-nearby');
+  const progressFill = document.getElementById('progress-fill');
+  const progressPct = document.getElementById('progress-pct');
+let progressTimer = null;
+
+function startProgress(){
+  let pct = 0;
+  progressFill.style.width = '0%';
+  progressPct.textContent = '0%';
+  progressTimer = setInterval(() => {
+    const step = pct < 60 ? 4 : pct < 85 ? 1.5 : 0.4;
+    pct = Math.min(pct + step, 92);
+    progressFill.style.width = pct + '%';
+    progressPct.textContent = Math.round(pct) + '%';
+  }, 200);
+}
+
+function finishProgress(){
+  if (progressTimer) clearInterval(progressTimer);
+  progressFill.style.width = '100%';
+  progressPct.textContent = '100%';
+}
+  toggleBtn.addEventListener('click', () => {
+    const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+    toggleBtn.setAttribute('aria-expanded', String(!expanded));
+    nearbyEl.style.display = expanded ? 'none' : 'block';
+    toggleBtn.firstChild.textContent = expanded ? '다른 결의 곡도 보기' : '다른 결의 곡 숨기기';
+  });
+
+  submitBtn.addEventListener('click', handleSubmit);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit();
+  });
+
+  async function handleSubmit(){
+    const text = input.value.trim();
+    errorBox.style.display = 'none';
+
+    if (!text){
+      errorBox.textContent = '장면 설명을 먼저 적어주세요.';
+      errorBox.style.display = 'block';
+      return;
+    }
+
+    submitBtn.disabled = true;
+    status.style.display = 'flex';
+    results.style.display = 'none';
+    nearbyEl.style.display = 'none';
+    toggleBtn.setAttribute('aria-expanded', 'false');
+    toggleBtn.firstChild.textContent = '다른 결의 곡도 보기';
+    startProgress(); 
+
+    try{
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({scene_description: text})
+      });
+
+      if (!res.ok) throw new Error('서버 응답 오류 (' + res.status + ')');
+
+      const data = await res.json();
+      finishProgress();  
+      renderResults(data);
+    }catch(err){
+      if (progressTimer) clearInterval(progressTimer);
+      errorBox.textContent = '곡을 찾지 못했어요. 서버 연결을 확인하고 다시 시도해주세요.';
+      errorBox.style.display = 'block';
+    }finally{
+      submitBtn.disabled = false;
+      status.style.display = 'none';
+    }
+  }
+
+  function renderResults(data){
+
+    top3El.innerHTML = '';
+    (data.top3 || []).forEach((track, i) => {
+  const div = document.createElement('div');
+  div.className = 'track' + (i === 0 ? ' primary' : '');
+  const pct = Math.round((track.similarity || 0) * 100);
+  div.innerHTML =
+    '<div class="track-top">' +
+      '<div>' +
+        '<div class="track-title">' + escapeHtml(track.title || '제목 미상') + '</div>' +
+        '<div class="track-artist">' + escapeHtml(track.artist || '아티스트 미상') + '</div>' +
+      '</div>' +
+      '<div class="track-score">' + pct + '% 일치</div>' +
+    '</div>';
+  top3El.appendChild(div);
+});
+
+    nearbyEl.innerHTML = '';
+    (data.nearby_cluster_reps || []).forEach(track => {
+      const div = document.createElement('div');
+      div.className = 'nearby-track';
+      div.innerHTML =
+        '<div>' +
+          '<div class="nearby-title">' + escapeHtml(track.title || '제목 미상') + '</div>' +
+          '<div class="nearby-artist">' + escapeHtml(track.artist || '아티스트 미상') + '</div>' +
+        '</div>' +
+        '<div class="nearby-topic">' + escapeHtml(track.cluster_topic_name || '') + '</div>';
+      nearbyEl.appendChild(div);
+    });
+
+    results.style.display = 'block';
+  }
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+</script>
+</body>
+</html>
