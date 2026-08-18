@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>씬 사운드트랙 — 장면에 어울리는 곡 찾기</title>
+<title>캐릭터 사운드트랙 — 서사에 어울리는 곡 찾기</title>
+<!-- html2canvas 라이브러리 (이미지 다운로드용) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
     --paper:#4b93ad;
@@ -20,6 +22,8 @@
     --leaf:#4a9e5b;
     --leaf-soft:#e8f7ec;
     --leaf-deep:#1e5e2b;
+    --yt-red:#e62117;
+    --sp-green:#1db954;
     --serif:'Iowan Old Style','Palatino Linotype','Noto Serif KR',serif;
     --sans:'Pretendard','Apple SD Gothic Neo',system-ui,sans-serif;
   }
@@ -55,9 +59,9 @@
   .lede{
     font-size:15px;
     color:#e5f3f8;
-    max-width:54ch;
+    max-width:56ch;
     margin:0 0 40px;
-    line-height:1.7;
+    line-height:1.75;
   }
   .panel{
     background:#ffffff;
@@ -187,13 +191,48 @@
 
   #results{display:none;}
 
+  /* 결과 상단 컨트롤 영역 */
+  .results-header-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin:36px 0 16px;
+    flex-wrap:wrap;
+    gap:12px;
+  }
   .section-label{
     font-size:13px;
     letter-spacing:0.08em;
     text-transform:uppercase;
     color:#d8eff8;
     font-weight:700;
-    margin:36px 0 16px;
+    margin:0;
+  }
+  
+  .header-actions{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+
+  .btn-action{
+    appearance:none;
+    border:none;
+    background:#ffffff;
+    color:var(--accent-deep);
+    font-family:var(--sans);
+    font-size:13px;
+    font-weight:700;
+    padding:8px 16px;
+    border-radius:20px;
+    cursor:pointer;
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+    transition:transform 0.15s ease, background 0.15s ease;
+    white-space:nowrap;
+  }
+  .btn-action:hover{
+    background:#f4f8fa;
+    transform:translateY(-1px);
   }
 
   /* 추천곡 카드 */
@@ -201,7 +240,7 @@
     border:1px solid var(--card-line);
     border-radius:14px;
     padding:22px;
-    margin-bottom:14px;
+    margin-bottom:16px;
     background:#ffffff;
     box-shadow:0 4px 14px rgba(0,0,0,0.06);
     transition:transform 0.15s ease;
@@ -212,9 +251,14 @@
   }
   .track-top{
     display:flex;
-    align-items:baseline;
+    align-items:flex-start;
     justify-content:space-between;
-    gap:12px;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .track-info{
+    flex:1;
+    min-width:200px;
   }
   .track-title{
     font-family:var(--serif);
@@ -228,6 +272,13 @@
     font-size:14px;
     font-weight:500;
   }
+  
+  .track-meta-right{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+  }
   .track-score{
     font-size:12px;
     font-weight:700;
@@ -237,8 +288,33 @@
     border-radius:20px;
     white-space:nowrap;
   }
+  
+  .listen-links{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .btn-listen{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    text-decoration:none;
+    font-size:11px;
+    font-weight:600;
+    padding:4px 9px;
+    border-radius:14px;
+    transition:transform 0.1s ease, opacity 0.15s ease;
+    white-space:nowrap;
+  }
+  .btn-listen:hover{
+    opacity:0.88;
+    transform:translateY(-1px);
+  }
+  .btn-listen.yt{color:#ffffff;background:var(--yt-red);}
+  .btn-listen.sp{color:#ffffff;background:var(--sp-green);}
+
   .track-reason{
-    margin-top:12px;
+    margin-top:14px;
     padding-top:12px;
     border-top:1px dashed var(--card-line);
     font-size:14px;
@@ -246,13 +322,18 @@
     line-height:1.65;
   }
   .track-reason::before{
-    content:"";
+    content:"이유: ";
     font-weight:600;
     color:var(--accent);
   }
 
   .toggle-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
     margin:32px 0 12px;
+    gap:12px;
+    flex-wrap:wrap;
   }
   button.toggle{
     appearance:none;
@@ -290,6 +371,7 @@
     gap:12px;
     padding:14px 0;
     border-bottom:1px solid #eef3f5;
+    flex-wrap:wrap;
   }
   .nearby-track:last-child{border-bottom:none;}
   .nearby-title{
@@ -301,12 +383,17 @@
     color:var(--ink-soft);
     font-size:13px;
   }
+  .nearby-right{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
   .nearby-topic{
     font-size:12px;
     font-weight:600;
     color:var(--leaf-deep);
     background:var(--leaf-soft);
-    padding:5px 12px;
+    padding:4px 10px;
     border-radius:20px;
     white-space:nowrap;
   }
@@ -318,6 +405,191 @@
     text-align:center;
   }
 
+  /* =========================================================
+     🎨 모달 팝업 (동그라미 컬러 칩 전용)
+     ========================================================= */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(14, 28, 34, 0.75);
+    backdrop-filter: blur(6px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-box {
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 24px 26px;
+    max-width: 440px;
+    width: 100%;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes modalPop {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .modal-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent-deep);
+  }
+  .btn-close-modal {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #8fa2aa;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+  }
+  .btn-close-modal:hover { color: #333; }
+
+  /* 🎨 심플한 동그라미 컬러 칩 바 */
+  .modal-color-chips {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f0f4f7;
+    padding: 7px 18px;
+    border-radius: 30px;
+  }
+  .modal-chip {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.8);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+  }
+  .modal-chip:hover { transform: scale(1.18); }
+  .modal-chip.active {
+    transform: scale(1.22);
+    border-color: #ffffff;
+    box-shadow: 0 0 0 2px var(--accent-deep), 0 3px 8px rgba(0,0,0,0.25);
+  }
+  .chip-teal { background: #4b93ad; }
+  .chip-dark { background: #141517; }
+  .chip-pink { background: #6b3350; }
+  .chip-cream { background: #d4c3aa; }
+
+  /* 🖼️ 실시간 미리보기 1:1 카드 */
+  #soundtrack-card-preview {
+    width: 380px;
+    height: 380px;
+    padding: 24px 20px;
+    box-sizing: border-box;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 10px 26px rgba(0,0,0,0.12);
+    transition: background 0.2s ease;
+  }
+  .card-header-sub { display: flex; flex-direction: column; gap: 2px; }
+  .card-eyebrow-sub { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 800; }
+  .card-title-sub { font-family: var(--serif); font-size: 18px; font-weight: 400; letter-spacing: -0.01em; }
+  .card-panel-sub {
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+  }
+  .card-item-sub { padding-bottom: 9px; }
+  .card-item-sub:last-child { padding-bottom: 0; border-bottom: none !important; }
+  .track-row-sub { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+  .track-name-wrap-sub { display: flex; align-items: baseline; gap: 5px; flex: 1; min-width: 0; }
+  .track-num-sub { font-family: var(--serif); font-size: 12px; font-weight: 700; }
+  .track-title-sub { font-family: var(--serif); font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-artist-sub { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track-pct-sub { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; white-space: nowrap; }
+  .track-reason-sub { font-size: 11px; line-height: 1.4; margin-top: 3px; }
+  .card-footer-sub { display: flex; align-items: center; justify-content: space-between; font-size: 10.5px; font-weight: 600; padding: 0 2px; }
+
+  /* 4가지 테마별 풀 컬러셋 */
+  #soundtrack-card-preview.theme-teal { background: #4b93ad; }
+  .theme-teal .card-eyebrow-sub { color: #d8eff8; }
+  .theme-teal .card-title-sub { color: #ffffff; }
+  .theme-teal .card-panel-sub { background: #ffffff; }
+  .theme-teal .card-item-sub { border-bottom: 1px dashed #e2ecf0; }
+  .theme-teal .track-num-sub { color: #2a6f86; }
+  .theme-teal .track-title-sub { color: #1c4f61; }
+  .theme-teal .track-artist-sub { color: #5c717e; }
+  .theme-teal .track-pct-sub { background: #eaf4f7; color: #2a6f86; }
+  .theme-teal .track-reason-sub { color: #22333b; }
+  .theme-teal .card-footer-sub { color: #d8eff8; }
+
+  #soundtrack-card-preview.theme-dark { background: #141517; }
+  .theme-dark .card-eyebrow-sub { color: #9ba0a6; }
+  .theme-dark .card-title-sub { color: #ffffff; }
+  .theme-dark .card-panel-sub { background: #202225; }
+  .theme-dark .card-item-sub { border-bottom: 1px dashed #303338; }
+  .theme-dark .track-num-sub { color: #a8b3cf; }
+  .theme-dark .track-title-sub { color: #f0f2f5; }
+  .theme-dark .track-artist-sub { color: #8e9297; }
+  .theme-dark .track-pct-sub { background: #2f3136; color: #d1d5db; }
+  .theme-dark .track-reason-sub { color: #dcddde; }
+  .theme-dark .card-footer-sub { color: #72767d; }
+
+  #soundtrack-card-preview.theme-pink { background: linear-gradient(145deg, #442236, #6b3350); }
+  .theme-pink .card-eyebrow-sub { color: #fce4ec; }
+  .theme-pink .card-title-sub { color: #ffffff; }
+  .theme-pink .card-panel-sub { background: #ffffff; }
+  .theme-pink .card-item-sub { border-bottom: 1px dashed #f2dbe5; }
+  .theme-pink .track-num-sub { color: #8e3b66; }
+  .theme-pink .track-title-sub { color: #5c2444; }
+  .theme-pink .track-artist-sub { color: #7a6b74; }
+  .theme-pink .track-pct-sub { background: #fdeef4; color: #8e3b66; }
+  .theme-pink .track-reason-sub { color: #2c2328; }
+  .theme-pink .card-footer-sub { color: #fce4ec; }
+
+  #soundtrack-card-preview.theme-cream { background: #d4c3aa; }
+  .theme-cream .card-eyebrow-sub { color: #6b5943; }
+  .theme-cream .card-title-sub { color: #2b2118; }
+  .theme-cream .card-panel-sub { background: #fcfaf5; }
+  .theme-cream .card-item-sub { border-bottom: 1px dashed #e0d5c3; }
+  .theme-cream .track-num-sub { color: #7d5a3c; }
+  .theme-cream .track-title-sub { color: #38281d; }
+  .theme-cream .track-artist-sub { color: #7c7065; }
+  .theme-cream .track-pct-sub { background: #eee5d5; color: #6b4d32; }
+  .theme-cream .track-reason-sub { color: #261c14; }
+  .theme-cream .card-footer-sub { color: #5c4a36; }
+
+  .btn-final-download {
+    appearance: none;
+    border: none;
+    background: var(--accent);
+    color: #ffffff;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 12px 28px;
+    border-radius: 25px;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  .btn-final-download:hover { background: var(--accent-deep); transform: translateY(-1px); }
+
   @media (max-width:520px){
     .wrap{padding:36px 16px 80px;}
     h1{font-size:26px;}
@@ -328,27 +600,28 @@
     .hint{text-align:center;}
     button.submit{width:100%;padding:14px 22px;font-size:15px;}
     .track{padding:16px;}
-    .track-top{flex-wrap:wrap;gap:6px 12px;}
+    .track-top{flex-direction:column;gap:10px;}
     .track-title{font-size:18px;}
     button.toggle{width:100%;padding:12px 16px;}
-    .nearby-track{flex-direction:column;align-items:flex-start;gap:6px;}
+    .nearby-track{flex-direction:column;align-items:flex-start;gap:8px;}
+    #soundtrack-card-preview{width:320px;height:320px;padding:18px 16px;}
   }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <div class="eyebrow">Scene → soundtrack</div>
+  <div class="eyebrow">Character → lyrics</div>
   <h1>어울리는 가사의 노래를 찾아보아요</h1>
   <p class="lede">
-    캐릭터의 서사나 특정 장면을 적어주세요. 69만 곡 중에서 입력하신 서사와 가장 깊은 공명을 이루는 곡들을 찾아드립니다.
+    캐릭터 혹은 페어 설명을 적어주세요. 감정선과 신념, 서로를 생각하는 마음을 중점적으로 써 주실 때 결과가 가장 정확합니다. 69만 곡 중에서 입력하신 내용과 가장 깊은 공명을 이루는 곡들을 찾아드립니다.
   </p>
 
   <div class="panel">
-    <label for="scene-input">장면 또는 캐릭터 서사</label>
+    <label for="scene-input">밑의 상자에 입력해주세요.</label>
     <textarea id="scene-input" placeholder="예: 오랜 세월 자신을 억눌러온 곳에서 마침내 벗어났지만, 자유로워진 순간에도 온전히 기뻐하지 못하는 인물의 이야기…"></textarea>
     <div class="row-bottom">
-      <span class="hint">한국어로 편하게 적어주세요.</span>
+      <span class="hint">한국어로 편하게 적어주세요. 서버 사용자가 많을 경우 곡을 고르는 데 10~20초 정도 걸릴 수 있으니, 조금만 기다려 주세요.</span>
       <button class="submit" id="submit-btn" type="button">곡 찾기</button>
     </div>
     <div class="error-box" id="error-box"></div>
@@ -368,10 +641,24 @@
 
   <!-- 결과 영역 -->
   <div id="results">
-    <div class="section-label">가장 어울리는 세 곡</div>
+    <div class="results-header-row">
+      <div class="section-label">가장 어울리는 세 곡</div>
+      <div class="header-actions">
+        <!-- 📋 텍스트 복사 버튼 -->
+        <button class="btn-action" id="btn-copy-txt" type="button">텍스트 복사</button>
+        <!-- 📸 모달 오픈 버튼 -->
+        <button class="btn-action" id="btn-open-modal" type="button">카드로 저장</button>
+      </div>
+    </div>
+
     <div id="top3"></div>
 
     <div class="toggle-row">
+      <!-- 🔀 다른 곡 셔플 버튼 -->
+      <button class="toggle" id="btn-shuffle" type="button">
+        다시 시도하기
+      </button>
+      <!-- 다른 결의 곡 토글 -->
       <button class="toggle" id="toggle-nearby" type="button" aria-expanded="false">
         다른 결의 곡도 보기<span class="chev">⌄</span>
       </button>
@@ -383,9 +670,45 @@
 
 </div>
 
+<!-- =========================================================
+     🎨 카드 미리보기 & 동그라미 컬러 칩 모달 창
+     ========================================================= -->
+<div class="modal-overlay" id="card-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">사운드트랙 이미지로 저장</span>
+      <button class="btn-close-modal" id="btn-close-modal" type="button">✕</button>
+    </div>
+
+    <!-- 🎨 심플한 원형 컬러 칩들 -->
+    <div class="modal-color-chips">
+      <div class="modal-chip chip-teal active" title="청록" onclick="selectModalTheme('teal')"></div>
+      <div class="modal-chip chip-dark" title="다크" onclick="selectModalTheme('dark')"></div>
+      <div class="modal-chip chip-pink" title="노을" onclick="selectModalTheme('pink')"></div>
+      <div class="modal-chip chip-cream" title="크림" onclick="selectModalTheme('cream')"></div>
+    </div>
+
+    <!-- 🖼️ 실시간 미리보기 카드 -->
+    <div id="soundtrack-card-preview" class="theme-teal">
+      <div class="card-header-sub">
+        <span class="card-eyebrow-sub">Character → Lyrics</span>
+        <span class="card-title-sub">캐릭터를 담은 세 곡</span>
+      </div>
+      <div class="card-panel-sub" id="preview-card-items"></div>
+      <div class="card-footer-sub">
+        <span>Character Soundtrack</span>
+        <span>@YeetTheJukebox</span>
+      </div>
+    </div>
+
+    <!-- 다운로드 버튼 -->
+    <button class="btn-final-download" id="btn-final-download" type="button">이미지로 다운로드</button>
+  </div>
+</div>
+
 <script>
-  // API 주소 (필요 시 로컬 http://localhost:8000/recommend 또는 배포 주소로 수정)
-  const API_URL = "https://etyagr7j2ymp3i-8002.proxy.runpod.net/recommend";
+  // ⭕ 현재 켜져 있는 RunPod 주소
+  const API_URL = "https://vlykicjbzry32e-8002.proxy.runpod.net/recommend";
 
   const input = document.getElementById('scene-input');
   const submitBtn = document.getElementById('submit-btn');
@@ -395,9 +718,16 @@
   const top3El = document.getElementById('top3');
   const nearbyEl = document.getElementById('nearby');
   const toggleBtn = document.getElementById('toggle-nearby');
+  const shuffleBtn = document.getElementById('btn-shuffle');
+  const copyTxtBtn = document.getElementById('btn-copy-txt');
+  const openModalBtn = document.getElementById('btn-open-modal');
+  const closeModalBtn = document.getElementById('btn-close-modal');
+  const cardModal = document.getElementById('card-modal');
+  const finalDownloadBtn = document.getElementById('btn-final-download');
   const progressFill = document.getElementById('progress-fill');
   const progressPct = document.getElementById('progress-pct');
   let progressTimer = null;
+  let currentTop3Data = [];
 
   function startProgress(){
     let pct = 0;
@@ -418,6 +748,26 @@
     progressPct.textContent = '100%';
   }
 
+  // 🎨 모달 내 원형 컬러 칩 선택 함수
+  function selectModalTheme(theme){
+    document.querySelectorAll('.modal-chip').forEach(chip => chip.classList.remove('active'));
+    document.querySelector('.chip-' + theme).classList.add('active');
+
+    const previewCard = document.getElementById('soundtrack-card-preview');
+    previewCard.className = 'theme-' + theme;
+  }
+
+  // 모달 열기 / 닫기
+  openModalBtn.addEventListener('click', () => {
+    cardModal.style.display = 'flex';
+  });
+  closeModalBtn.addEventListener('click', () => {
+    cardModal.style.display = 'none';
+  });
+  cardModal.addEventListener('click', (e) => {
+    if (e.target === cardModal) cardModal.style.display = 'none';
+  });
+
   toggleBtn.addEventListener('click', () => {
     const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
     toggleBtn.setAttribute('aria-expanded', String(!expanded));
@@ -425,9 +775,59 @@
     toggleBtn.childNodes[0].textContent = expanded ? '다른 결의 곡도 보기' : '다른 결의 곡 숨기기';
   });
 
+  // 🔀 다른 곡 추천받기
+  shuffleBtn.addEventListener('click', () => {
+    handleSubmit();
+  });
+
+  // 📋 텍스트 복사 핸들러
+  copyTxtBtn.addEventListener('click', () => {
+    if (!currentTop3Data || currentTop3Data.length === 0) return;
+    
+    let copyText = "[캐릭터를 담은 세 곡]\n\n";
+    currentTop3Data.forEach((track, i) => {
+      const pct = Math.round((track.similarity || 0) * 100);
+      copyText += "0" + (i + 1) + ". " + track.title + " - " + track.artist + " (" + pct + "% 일치)\n";
+      if (track.reason){
+        copyText += "   → " + track.reason + "\n";
+      }
+    });
+    copyText += "\n프로그램 개발: @YeetTheJukebox";
+
+    navigator.clipboard.writeText(copyText).then(() => {
+      copyTxtBtn.textContent = "복사 완료되었습니다.";
+      setTimeout(() => { copyTxtBtn.textContent = "텍스트 복사"; }, 2000);
+    }).catch(() => {
+      alert("클립보드 복사에 실패했습니다.");
+    });
+  });
+
   submitBtn.addEventListener('click', handleSubmit);
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit();
+  });
+
+  // 📸 최종 이미지 다운로드 핸들러
+  finalDownloadBtn.addEventListener('click', async () => {
+    finalDownloadBtn.textContent = '이미지 캡처 중...';
+    finalDownloadBtn.disabled = true;
+    try {
+      const card = document.getElementById('soundtrack-card-preview');
+      const canvas = await html2canvas(card, {
+        scale: 2.5, // 2.5배 초고화질
+        backgroundColor: null,
+        useCORS: true
+      });
+      const link = document.createElement('a');
+      link.download = 'character_soundtrack.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (e) {
+      alert('이미지 생성에 실패했습니다.');
+    } finally {
+      finalDownloadBtn.textContent = '이미지로 다운로드';
+      finalDownloadBtn.disabled = false;
+    }
   });
 
   async function handleSubmit(){
@@ -435,7 +835,7 @@
     errorBox.style.display = 'none';
 
     if (!text){
-      errorBox.textContent = '장면 또는 캐릭터 서사를 먼저 적어주세요.';
+      errorBox.textContent = '캐릭터 혹은 페어 설명을 먼저 적어주세요.';
       errorBox.style.display = 'block';
       return;
     }
@@ -458,9 +858,9 @@
       if (!res.ok) throw new Error('서버 응답 오류 (' + res.status + ')');
 
       const data = await res.json();
+      currentTop3Data = data.top3 || [];
       finishProgress();
 
-      // 프로그레스 바 100% 완료를 잠시 보여준 후 결과 렌더링
       setTimeout(() => {
         status.style.display = 'none';
         renderResults(data);
@@ -478,39 +878,80 @@
 
   function renderResults(data){
     top3El.innerHTML = '';
+    const previewItems = document.getElementById('preview-card-items');
+    previewItems.innerHTML = '';
+
     (data.top3 || []).forEach((track, i) => {
+      const pct = Math.round((track.similarity || 0) * 100);
+      const artist = track.artist || '아티스트 미상';
+      const title = track.title || '제목 미상';
+      const reason = track.reason || '서사의 감정선과 자연스럽게 어울리는 곡입니다.';
+      const searchQuery = encodeURIComponent(artist + ' ' + title);
+      const ytUrl = 'https://www.youtube.com/results?search_query=' + searchQuery;
+      const spUrl = 'https://open.spotify.com/search/' + searchQuery;
+
+      // 1. 웹 화면용 카드 렌더링
       const div = document.createElement('div');
       div.className = 'track' + (i === 0 ? ' primary' : '');
-      const pct = Math.round((track.similarity || 0) * 100);
-
       let html = 
         '<div class="track-top">' +
-          '<div>' +
-            '<div class="track-title">' + escapeHtml(track.title || '제목 미상') + '</div>' +
-            '<div class="track-artist">' + escapeHtml(track.artist || '아티스트 미상') + '</div>' +
+          '<div class="track-info">' +
+            '<div class="track-title">' + escapeHtml(title) + '</div>' +
+            '<div class="track-artist">' + escapeHtml(artist) + '</div>' +
           '</div>' +
-          '<div class="track-score">' + pct + '% 일치</div>' +
-        '</div>';
-
-      // 추천 이유가 있을 경우 표시
-      if (track.reason){
-        html += '<div class="track-reason">' + escapeHtml(track.reason) + '</div>';
-      }
+          '<div class="track-meta-right">' +
+            '<div class="listen-links">' +
+              '<a class="btn-listen yt" href="' + ytUrl + '" target="_blank" rel="noopener noreferrer">▶ YouTube</a>' +
+              '<a class="btn-listen sp" href="' + spUrl + '" target="_blank" rel="noopener noreferrer">🟢 Spotify</a>' +
+            '</div>' +
+            '<div class="track-score">' + pct + '% 일치</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="track-reason">' + escapeHtml(reason) + '</div>';
 
       div.innerHTML = html;
       top3El.appendChild(div);
+
+      // 2. 모달 내 1:1 미리보기 카드 아이템 렌더링
+      const previewItem = document.createElement('div');
+      previewItem.className = 'card-item-sub';
+      previewItem.innerHTML =
+        '<div class="track-row-sub">' +
+          '<div class="track-name-wrap-sub">' +
+            '<span class="track-num-sub">0' + (i + 1) + '</span>' +
+            '<span class="track-title-sub">' + escapeHtml(title) + '</span>' +
+            '<span class="track-artist-sub">' + escapeHtml(artist) + '</span>' +
+          '</div>' +
+          '<span class="track-pct-sub">' + pct + '% 일치</span>' +
+        '</div>' +
+        '<div class="track-reason-sub">' + escapeHtml(reason) + '</div>';
+      previewItems.appendChild(previewItem);
     });
 
+    // 이웃 클러스터 곡 목록 렌더링
     nearbyEl.innerHTML = '';
     (data.nearby_cluster_reps || []).forEach(track => {
       const div = document.createElement('div');
       div.className = 'nearby-track';
+      
+      const artist = track.artist || '아티스트 미상';
+      const title = track.title || '제목 미상';
+      const searchQuery = encodeURIComponent(artist + ' ' + title);
+      const ytUrl = 'https://www.youtube.com/results?search_query=' + searchQuery;
+      const spUrl = 'https://open.spotify.com/search/' + searchQuery;
+
       div.innerHTML =
         '<div>' +
-          '<div class="nearby-title">' + escapeHtml(track.title || '제목 미상') + '</div>' +
-          '<div class="nearby-artist">' + escapeHtml(track.artist || '아티스트 미상') + '</div>' +
+          '<div class="nearby-title">' + escapeHtml(title) + '</div>' +
+          '<div class="nearby-artist">' + escapeHtml(artist) + '</div>' +
         '</div>' +
-        '<div class="nearby-topic">' + escapeHtml(track.cluster_topic_name || '기타 테마') + '</div>';
+        '<div class="nearby-right">' +
+          '<div class="listen-links">' +
+            '<a class="btn-listen yt" href="' + ytUrl + '" target="_blank" rel="noopener noreferrer">▶ YouTube</a>' +
+            '<a class="btn-listen sp" href="' + spUrl + '" target="_blank" rel="noopener noreferrer">🟢 Spotify</a>' +
+          '</div>' +
+          '<div class="nearby-topic">' + escapeHtml(track.cluster_topic_name || '기타 테마') + '</div>' +
+        '</div>';
       nearbyEl.appendChild(div);
     });
 
